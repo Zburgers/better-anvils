@@ -10,6 +10,7 @@ import net.minecraft.network.chat.Component;
 public final class BetterAnvilsClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
+        BetterAnvils.useClientPolicy(ClientPolicyState::effectiveConfig);
         ClientPlayNetworking.registerGlobalReceiver(AnvilPolicyPayload.TYPE, (payload, context) -> context.client().execute(() -> {
             if (!ClientPolicyState.accept(payload)) {
                 BetterAnvils.LOGGER.warn("Rejected unsupported or invalid server anvil policy payload");

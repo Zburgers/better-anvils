@@ -5,7 +5,8 @@
   "name": "Better Anvils Tests",
   "environment": "*",
   "entrypoints": {
-    "fabric-gametest": ["io.github.zburgers.betteranvils.test.AnvilGameTests"]
+    "fabric-gametest": ["io.github.zburgers.betteranvils.test.AnvilGameTests"],
+    "fabric-client-gametest": ["io.github.zburgers.betteranvils.test.AnvilClientTests"]
   },
   "depends": {
     "fabricloader": ">=0.19.3",

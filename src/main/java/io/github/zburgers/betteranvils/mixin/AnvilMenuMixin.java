@@ -21,7 +21,7 @@ abstract class AnvilMenuMixin {
         if (original <= 0) {
             return original;
         }
-        return AnvilCostPolicy.discountedCost(Math.toIntExact(original), BetterAnvils.activeConfig()).orElseThrow();
+        return AnvilCostPolicy.discountedCost(Math.toIntExact(original), BetterAnvils.effectiveConfig()).orElseThrow();
     }
 
     @ModifyArg(
@@ -30,21 +30,21 @@ abstract class AnvilMenuMixin {
             index = 0
     )
     private long betterAnvils$excludePriorWorkTax(long original, @Local(index = 3) long priorWorkTax) {
-        return BetterAnvils.activeConfig().preservePriorWorkPenalty() ? original : original - priorWorkTax;
+        return BetterAnvils.effectiveConfig().preservePriorWorkPenalty() ? original : original - priorWorkTax;
     }
 
     @ModifyConstant(method = "createResult", constant = @Constant(intValue = 40, ordinal = 1))
     private int betterAnvils$renameThreshold(int original) {
-        return BetterAnvils.activeConfig().maximumAnvilCost() + 1;
+        return BetterAnvils.effectiveConfig().maximumAnvilCost() + 1;
     }
 
     @ModifyConstant(method = "createResult", constant = @Constant(intValue = 39))
     private int betterAnvils$renameMaximum(int original) {
-        return BetterAnvils.activeConfig().maximumAnvilCost();
+        return BetterAnvils.effectiveConfig().maximumAnvilCost();
     }
 
     @ModifyConstant(method = "createResult", constant = @Constant(intValue = 40, ordinal = 2))
     private int betterAnvils$survivalThreshold(int original) {
-        return BetterAnvils.activeConfig().maximumAnvilCost() + 1;
+        return BetterAnvils.effectiveConfig().maximumAnvilCost() + 1;
     }
 }
