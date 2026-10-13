@@ -5,7 +5,9 @@ import io.github.zburgers.betteranvils.config.BetterAnvilsConfig;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.item.ItemStack;
@@ -34,5 +36,70 @@ public final class AnvilGameTests {
         helper.assertTrue(EnchantmentHelper.getEnchantmentsForCrafting(output).getLevel(sharpness) == 5, "Sharpness level should remain unchanged");
         helper.assertTrue(output.getDamageValue() == 0, "Durability should remain unchanged");
         helper.succeed();
+    }
+
+    @GameTest
+    public void maximumNormalCostIsAllowed(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var menu = enchantedSwordMenu(helper, player, 194);
+        helper.assertTrue(menu.getCost() == 100 && menu.getSlot(2).hasItem(), "Cost 100 should remain selectable");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void costAboveMaximumIsRejected(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var menu = enchantedSwordMenu(helper, player, 196);
+        helper.assertTrue(menu.getCost() == 101 && !menu.getSlot(2).hasItem(), "Cost 101 should be rejected");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void creativePlayerKeepsVanillaPermission(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.CREATIVE);
+        player.getAbilities().instabuild = true;
+        var menu = enchantedSwordMenu(helper, player, 196);
+        helper.assertTrue(menu.getCost() == 101 && menu.getSlot(2).hasItem(), "Creative player should keep an above-limit result");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void renameOnlyUsesConfiguredMaximum(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var sword = new ItemStack(Items.DIAMOND_SWORD);
+        sword.set(DataComponents.REPAIR_COST, 300);
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(sword);
+        menu.setItemName("Renamed sword");
+        menu.createResult();
+        helper.assertTrue(menu.getCost() == 100 && menu.getSlot(2).hasItem(), "Rename-only operation should cap at 100");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void stackedItemPenaltyRemainsVanillaCostForty(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        var sword = new ItemStack(Items.DIAMOND_SWORD);
+        var enchantedBook = EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, 1));
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(sword);
+        menu.getSlot(0).getItem().setCount(2);
+        menu.getSlot(1).set(enchantedBook);
+        menu.createResult();
+        helper.assertTrue(menu.getCost() == 20, "Vanilla stacked-item penalty 40 should be discounted to 20; got " + menu.getCost() + ", output=" + menu.getSlot(2).hasItem());
+        helper.succeed();
+    }
+
+    private AnvilMenu enchantedSwordMenu(GameTestHelper helper, Player player, int repairCost) {
+        var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        var sword = new ItemStack(Items.DIAMOND_SWORD);
+        sword.set(DataComponents.REPAIR_COST, repairCost);
+        var book = EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, 5));
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(sword);
+        menu.getSlot(1).set(book);
+        menu.createResult();
+        return menu;
     }
 }
