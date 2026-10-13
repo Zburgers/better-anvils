@@ -1,0 +1,83 @@
+name: Build and test
+
+on:
+  push:
+    branches: [26.2-better-anvils, main]
+  pull_request:
+    branches: [26.2-better-anvils, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
+          validate-wrappers: true
+
+      - name: Build and run unit tests
+        run: ./gradlew clean test build --stacktrace
+
+      - name: Run client game tests with optional settings mods
+        run: xvfb-run -a ./gradlew runClientGameTest --stacktrace
+        env:
+          ALSOFT_DRIVERS: "null"
+
+      - name: Smoke test dedicated server startup
+        shell: bash
+        run: |
+          mkdir -p run
+          printf 'eula=true\n' > run/eula.txt
+          set +e
+          timeout --signal=INT --kill-after=15s 120s ./gradlew runServer --console plain > build/verification-server.log 2>&1
+          result=$?
+          set -e
+          cat build/verification-server.log
+          grep -q 'Done (' build/verification-server.log
+          if [[ "$result" -ne 0 && "$result" -ne 124 && "$result" -ne 130 ]]; then
+            exit "$result"
+          fi
+
+      - name: Smoke test client without optional GUI mods
+        shell: bash
+        env:
+          ALSOFT_DRIVERS: "null"
+        run: |
+          set +e
+          timeout --signal=INT --kill-after=15s 120s xvfb-run -a ./gradlew -PwithoutOptionalGui runClient --console plain > build/verification-client-core.log 2>&1
+          result=$?
+          set -e
+          cat build/verification-client-core.log
+          grep -q 'Better Anvils initialized' build/verification-client-core.log
+          grep -q 'Reloading ResourceManager: vanilla, better-anvils' build/verification-client-core.log
+          if [[ "$result" -ne 0 && "$result" -ne 124 && "$result" -ne 130 ]]; then
+            exit "$result"
+          fi
+
+      - name: Upload test reports, logs, screenshots, and mod jar
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: better-anvils-${{ github.sha }}
+          if-no-files-found: error
+          path: |
+            build/libs/better-anvils-*.jar
+            !build/libs/*-sources.jar
+            build/reports/tests/test/**
+            build/run/gameTest/logs/**
+            build/run/clientGameTest/logs/**
+            build/run/clientGameTest/screenshots/**
+            build/verification-*.log

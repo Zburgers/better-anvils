@@ -37,8 +37,10 @@ dependencies {
 
     clientCompileOnly "com.terraformersmc:modmenu:${modmenu_version}"
     clientCompileOnly "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}"
-    clientRuntimeOnly "com.terraformersmc:modmenu:${modmenu_version}"
-    clientRuntimeOnly "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}"
+    if (!providers.gradleProperty('withoutOptionalGui').isPresent()) {
+        clientRuntimeOnly "com.terraformersmc:modmenu:${modmenu_version}"
+        clientRuntimeOnly "me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}"
+    }
 
     testImplementation "org.junit.jupiter:junit-jupiter:${junit_version}"
     testImplementation "net.fabricmc:fabric-loader-junit:${loader_version}"
