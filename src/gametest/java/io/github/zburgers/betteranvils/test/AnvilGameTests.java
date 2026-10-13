@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -108,6 +109,98 @@ public final class AnvilGameTests {
         menu.getSlot(1).set(enchantedBook);
         menu.createResult();
         helper.assertTrue(menu.getCost() == 20, "Vanilla stacked-item penalty 40 should be discounted to 20; got " + menu.getCost() + ", output=" + menu.getSlot(2).hasItem());
+        helper.succeed();
+    }
+
+    @GameTest
+    public void insufficientLevelsCannotTakeResult(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.experienceLevel = 2;
+        var menu = enchantedSwordMenu(helper, player, 0);
+        helper.assertTrue(menu.getCost() == 3 && menu.getSlot(2).hasItem(), "Anvil should show the discounted cost");
+        menu.clicked(2, 0, ContainerInput.PICKUP, player);
+        helper.assertTrue(player.experienceLevel == 2 && menu.getSlot(0).hasItem() && menu.getSlot(1).hasItem(), "Insufficient XP must not charge or consume inputs");
+        helper.assertTrue(menu.getSlot(2).hasItem() && menu.getCarried().isEmpty(), "Insufficient XP must leave the result untouched");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void takingResultChargesDisplayedLevelsAndConsumesInputs(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        player.experienceLevel = 125;
+        var menu = enchantedSwordMenu(helper, player, 194);
+        var expected = menu.getCost();
+        menu.clicked(2, 0, ContainerInput.PICKUP, player);
+        helper.assertTrue(expected == 100 && player.experienceLevel == 25, "Pickup should subtract exactly the displayed cost");
+        helper.assertTrue(menu.getCarried().getItem() == Items.DIAMOND_SWORD, "Vanilla result should move to the cursor");
+        var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        helper.assertTrue(EnchantmentHelper.getEnchantmentsForCrafting(menu.getCarried()).getLevel(sharpness) == 5, "Pickup should preserve the Sharpness level");
+        helper.assertTrue(!menu.getSlot(0).hasItem() && !menu.getSlot(1).hasItem(), "Successful pickup should consume both inputs exactly once");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void renameKeepsRequestedName(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(new ItemStack(Items.DIAMOND_SWORD));
+        menu.setItemName("Renamed sword");
+        helper.assertTrue(menu.getSlot(2).getItem().getHoverName().getString().equals("Renamed sword"), "Rename result should keep the requested name");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void repairMaterialKeepsVanillaDurabilityResult(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var sword = new ItemStack(Items.DIAMOND_SWORD);
+        sword.setDamageValue(100);
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(sword);
+        menu.getSlot(1).set(new ItemStack(Items.DIAMOND));
+        menu.createResult();
+        helper.assertTrue(menu.getSlot(2).hasItem() && menu.getSlot(2).getItem().getDamageValue() == 0, "Diamond repair should preserve vanilla durability calculation");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void sacrificedItemMergeKeepsVanillaDurabilityResult(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var first = new ItemStack(Items.DIAMOND_SWORD);
+        var second = new ItemStack(Items.DIAMOND_SWORD);
+        first.setDamageValue(1000);
+        second.setDamageValue(1000);
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(first);
+        menu.getSlot(1).set(second);
+        menu.createResult();
+        int maximum = first.getMaxDamage();
+        int expectedDamage = Math.max(0, maximum - (maximum - 1000) - (maximum - 1000) - maximum * 12 / 100);
+        helper.assertTrue(menu.getSlot(2).hasItem() && menu.getSlot(2).getItem().getDamageValue() == expectedDamage, "Sacrificed-item repair should keep vanilla durability formula");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void incompatibleEnchantmentsDoNotCreateResult(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var enchantments = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
+        var sharpness = enchantments.getOrThrow(Enchantments.SHARPNESS);
+        var smite = enchantments.getOrThrow(Enchantments.SMITE);
+        var sword = new ItemStack(Items.DIAMOND_SWORD);
+        EnchantmentHelper.updateEnchantments(sword, mutable -> mutable.set(sharpness, 5));
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(sword);
+        menu.getSlot(1).set(EnchantmentHelper.createBook(new EnchantmentInstance(smite, 5)));
+        menu.createResult();
+        helper.assertTrue(!menu.getSlot(2).hasItem() && menu.getCost() == 0, "Incompatible enchantment-only operation should remain invalid");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void emptyAnvilDoesNotForgeResult(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.createResult();
+        helper.assertTrue(!menu.getSlot(2).hasItem() && menu.getCost() == 0, "Empty inputs should keep the result and cost empty");
         helper.succeed();
     }
 
