@@ -115,8 +115,8 @@
 | P05 | GUI review | Screenshots in 26.2 and human confirmation | readable, no overlap/clipping | PASS (cost, default settings, and validation screenshots reviewed) |
 | P06 | Jar inspect | `jar tf build/libs/*.jar` | correct metadata/resources, no unwanted datapack | PASS |
 | P07 | Conflict check | With Too Cheap installed | clear incompatible-mod detection, no stacked modification | NOT RUN (metadata declares `breaks`; competing mod not installed) |
-| P08 | GitHub CI | GitHub Actions linked to branch commit | all required jobs green | NOT RUN |
-| P09 | Remote SHA | compare local HEAD to `git ls-remote` | identical complete commit SHA | NOT RUN |
+| P08 | GitHub CI | [Run 38407341564](https://github.com/Zburgers/better-anvils/actions/runs/38407341564), implementation SHA `ee184f9c78053b75321edbfdd93a42c58b1edcff` | all required jobs green | PASS |
+| P09 | Remote SHA | `git ls-remote origin refs/heads/26.2-better-anvils` | identical complete commit SHA | PASS (`ee184f9c78053b75321edbfdd93a42c58b1edcff`; checked before this report-only update) |
 | P10 | Release restraint | Branch-only implementation; no merge or publication performed | no publication/merge without permission | PASS |
 
 ## Local execution record — 2026-10-13
@@ -153,4 +153,4 @@ Workflow syntax and patch whitespace:
   Result: PASS.
 ```
 
-Local logs are temporary and are not committed. GitHub Actions and remote SHA verification remain pending until the feature branch push completes. Multiplayer with two clients and Too Cheap installed were not exercised.
+Local logs are temporary and are not committed. GitHub Actions passed all steps on implementation SHA `ee184f9c78053b75321edbfdd93a42c58b1edcff`; this record-only update does not change source or workflow code. Multiplayer with two clients and Too Cheap installed were not exercised.

@@ -21,8 +21,9 @@ The clean build and client test tree is committed as `ffe6b57bda7f4783844fd7e53c
 - A dedicated server startup reached `Done` with optional GUI dependencies absent. A client smoke without Mod Menu and Cloth Config reached the main menu and loaded Better Anvils resources.
 - HigherEnchants 1.4 for 26.2 passed the compatibility profile: dynamic Sharpness VIII and pack-defined Sharpness/Smite compatibility were preserved. The externally acquired datapack was used only as a temporary local fixture and is not included in this repository.
 - `actionlint .github/workflows/build.yml`, jar inspection, and `git diff --check` passed.
+- [GitHub Actions run 38407341564](https://github.com/Zburgers/better-anvils/actions/runs/38407341564) passed all steps on implementation SHA `ee184f9c78053b75321edbfdd93a42c58b1edcff`, including the unit/GameTest build, client GameTests, dedicated-server startup, client startup without optional GUI mods, and artifact upload.
 
-The step-by-step local results and outstanding acceptance cases are in the [acceptance matrix](testing/acceptance-matrix.md). Local logs live under `/tmp` and are not committed. Remote GitHub Actions and remote SHA verification require the branch push and remain pending.
+The step-by-step local results and outstanding acceptance cases are in the [acceptance matrix](testing/acceptance-matrix.md). Local logs live under `/tmp` and are not committed. The implementation SHA above was pushed and matched the remote branch; this later report-only update does not change source or workflow code.
 
 ## Remaining qualification
 
