@@ -64,6 +64,8 @@
 - HigherEnchants 1.4 for 26.2: https://modrinth.com/datapack/higherenchants/version/AE9dkSbO
 - Too Cheap source/mixins and MIT license: https://github.com/the-sh4d0w/too-cheap
 
+**Implementation-time deviation (2026-10-13):** Loom 1.17.21 rejected `loom.officialMojangMappings()` with `Cannot use Mojang mappings in a non-obfuscated environment`. The 26.2 no-remap plugin already exposes the game's official names, so the build omits a `mappings` dependency/declaration. The same plugin does not create remap-specific `modImplementation` configurations; the build uses normal Java `implementation` and client source-set configurations. Loom's generated project repositories also cause Gradle to ignore `settings.gradle` dependency repositories, so optional UI Maven repositories are configured at project level. These findings were verified during Task 01 bootstrap.
+
 **Verified behavior in reviewed Minecraft 26.2 source:** `AnvilMenu.createResult` computes `tax`, `price` and `finalPrice`, then uses 40 for a stacked-enchantment penalty, 40 for rename-only cap check, 39 for rename-only replacement, and 40 for the normal survival threshold. `AnvilScreen.extractLabels` has a separate 40 check. **Never blindly replace every 40:** the stacked-enchantment penalty must remain 40; only the two threshold checks and the 39 clamp are targets. Before implementation, inspect bytecode in the actual Loom build and pin accurate Mixin injection points; decompiled code and injection ordinals are not a substitute for a real launch test.
 
 ## 3. Planned filesystem layout (exact paths)
