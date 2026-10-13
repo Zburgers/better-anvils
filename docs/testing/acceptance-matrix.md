@@ -53,7 +53,7 @@
 | G09 | Repair material | Damageable tool + allowed material | Vanilla repair amount and material consumption | PASS |
 | G10 | Item merge | Two compatible damageable items | Vanilla combined durability behavior | PASS |
 | G11 | Rename only | High-tax rename, above normal cap | Vanilla rename exemption re-based to configured max | PASS |
-| G12 | Rename with another change | Rename + enchant or repair above cap | No rename-only exemption | NOT RUN |
+| G12 | Rename with another change | Rename + enchant or repair above cap | No rename-only exemption | NOT RUN (new GameTest committed; awaiting CI) |
 | G13 | Prior-work ON | Existing repair penalty, default flag true | Vanilla pre-cost tax, discounted afterward | PASS |
 | G14 | Prior-work OFF | Same input, false | Prior-work XP tax ignored; metadata preserved/increases normally | PASS |
 | G15 | Anvil break behavior | Repeated vanilla pickup operations | Same vanilla 12% RNG event condition; no modded break hook | NOT RUN |
@@ -76,14 +76,14 @@
 | C10 | Dedicated UI protection | Open client menu connected to setup C | Server-controlled values read-only; no local Save impersonates server config | NOT RUN |
 | C11 | Reopen persistence | Restart Minecraft after Save | Same configuration shown | NOT RUN (service round-trip is unit-tested; client restart is not) |
 | C12 | GUI max cost | Cost 100, sufficient levels | Screen displays 100 and not 'Too Expensive' | PASS |
-| C13 | GUI over max | Cost 101 | Screen shows too-expensive/unavailable condition correctly | NOT RUN |
+| C13 | GUI over max | Cost 101 | Screen shows too-expensive/unavailable condition correctly | NOT RUN (new automated client assertion and screenshot added; awaiting CI execution) |
 
 ## Network and headless server tests
 
 | ID | Requirement | Action | Expected result | Status |
 |---|---|---|---|---|
 | N01 | Dedicated server boot | Launch setup C headlessly | No `net.minecraft.client` linkage, mixin or absent GUI library crash | PASS (server reached `Done` with optional GUI mods absent) |
-| N02 | On-join sync | Server policy 75%, client JSON 50% | Client display and prediction use server 75%; server deducts 75%-policy cost | PASS (integrated-server join and policy update) |
+| N02 | On-join sync | Server policy 75%, client JSON 50% | Client display and prediction use server 75%; server deducts 75%-policy cost | NOT RUN (prior integrated-server test did not exercise a remote dedicated server/client configuration mismatch) |
 | N03 | Rejoin refresh | Client leaves server C and joins different policy | No stale policy carries over | NOT RUN |
 | N04 | Two clients | Two connected players with unlike local configs | Identical canonical server charge for same work | NOT RUN |
 | N05 | Server config restart | Change server JSON then restart | New policy reaches clients; old config not authoritative | NOT RUN |
@@ -97,11 +97,11 @@
 |---|---|---|---|---|
 | H01 | Baseline no datapack | Setup A, standard books/tool | Vanilla enchant level caps respected; pricing mod works | PASS |
 | H02 | Datapack loaded | Setup D, verify dynamic definitions with `/datapack list` | Correct external pack enabled, no bundled files | PASS (Sharpness registry maximum asserted as 8) |
-| H03 | High-level books | Combine HigherEnchants enchanted books | Levels up to pack limit preserved; correct discount | PASS (Sharpness VIII book applied) |
-| H04 | High-level equipment | Apply books to armor/weapon/tool | Dynamically configured levels apply | PASS (Diamond sword result retained level VIII) |
+| H03 | High-level books | Combine HigherEnchants enchanted books | Levels up to pack limit preserved; correct discount | PARTIAL (Sharpness VIII book applied; new book-merge GameTest awaiting CI execution) |
+| H04 | High-level equipment | Apply books to armor/weapon/tool | Dynamically configured levels apply | PARTIAL (Diamond sword retained level VIII; armor/tools remain untested) |
 | H05 | Modified compatibility | Combine pack-compatible enchantments | Datapack compatibility recognized | PASS (Sharpness/Smite pair combined as defined by fixture) |
-| H06 | Forbidden combinations | Try pair still incompatible with pack | Vanilla/data-driven rejection remains | NOT RUN (no still-forbidden pair was exercised in this fixture run) |
-| H07 | Equipment repairs | Repair already highly enchanted gear | Enchant levels, item components and durability preserved | NOT RUN |
+| H06 | Forbidden combinations | Try pair still incompatible with pack | Vanilla/data-driven rejection remains | NOT RUN (new unsupported sword enchantment GameTest added, HigherEnchants fixture not yet rerun) |
+| H07 | Equipment repairs | Repair already highly enchanted gear | Enchant levels, item components and durability preserved | NOT RUN (new GameTest committed; HigherEnchants fixture run pending) |
 | H08 | Packaging | Inspect built jar entries | No HigherEnchants or `data/minecraft/enchantment/` files | PASS |
 
 ## CI and release checks
@@ -115,8 +115,8 @@
 | P05 | GUI review | Screenshots in 26.2 and human confirmation | readable, no overlap/clipping | PASS (cost, default settings, and validation screenshots reviewed) |
 | P06 | Jar inspect | `jar tf build/libs/*.jar` | correct metadata/resources, no unwanted datapack | PASS |
 | P07 | Conflict check | With Too Cheap installed | clear incompatible-mod detection, no stacked modification | NOT RUN (metadata declares `breaks`; competing mod not installed) |
-| P08 | GitHub CI | [Run 38410238219](https://github.com/Zburgers/better-anvils/actions/runs/38410238219), implementation SHA `e298a20067c3854ed40912fe5786242da3fc10b3` | all required jobs green | PASS |
-| P09 | Remote SHA | `git ls-remote origin refs/heads/26.2-better-anvils` | identical complete commit SHA | PASS (`e298a20067c3854ed40912fe5786242da3fc10b3`; checked before this report-only update) |
+| P08 | GitHub CI | [Run 38410238219](https://github.com/Zburgers/better-anvils/actions/runs/38410238219), implementation SHA `e298a20067c3854ed40912fe5786242da3fc10b3` | all required jobs green | PASS for historical implementation only; new remediation commits awaiting verification |
+| P09 | Remote SHA | `git ls-remote origin refs/heads/26.2-better-anvils` | identical complete commit SHA | PASS for historical implementation; remediation branch pushed through GitHub connector, final CI not yet verified |
 | P10 | Release restraint | Branch-only implementation; no merge or publication performed | no publication/merge without permission | PASS |
 
 ## Local execution record — 2026-10-13

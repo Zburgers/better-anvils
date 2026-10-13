@@ -216,6 +216,15 @@ public final class AnvilClientTests implements FabricClientGameTest {
             throw new AssertionError("Invalid settings must leave the saved config file unchanged");
         }
         exerciseFailedSaveRecovery(context, configFile);
+        context.runOnClient(client -> {
+            var menu = sharpnessMenu(client, client.player, 196);
+            if (menu.getCost() != 101 || menu.getSlot(2).hasItem()) {
+                throw new AssertionError("A regular cost-101 result must be unavailable in the client");
+            }
+            client.setScreenAndShow(new AnvilScreen(menu, client.player.getInventory(), Component.literal("Anvil")));
+        });
+        context.waitForScreen(AnvilScreen.class);
+        context.takeScreenshot("anvil-cost-101");
     }
 
     private void exerciseFailedSaveRecovery(ClientGameTestContext context, java.nio.file.Path configFile) throws Exception {
@@ -265,9 +274,13 @@ public final class AnvilClientTests implements FabricClientGameTest {
     }
 
     private static AnvilMenu sharpnessMenu(net.minecraft.client.Minecraft client, net.minecraft.world.entity.player.Player player) {
+        return sharpnessMenu(client, player, 194);
+    }
+
+    private static AnvilMenu sharpnessMenu(net.minecraft.client.Minecraft client, net.minecraft.world.entity.player.Player player, int repairCost) {
         var sharpness = player.level().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
         var sword = new ItemStack(Items.DIAMOND_SWORD);
-        sword.set(DataComponents.REPAIR_COST, 194);
+        sword.set(DataComponents.REPAIR_COST, repairCost);
         var book = EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, 5));
         var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
         menu.getSlot(0).set(sword);

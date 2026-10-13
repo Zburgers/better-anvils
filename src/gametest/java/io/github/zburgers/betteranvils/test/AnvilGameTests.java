@@ -239,6 +239,69 @@ public final class AnvilGameTests {
         helper.succeed();
     }
 
+    @GameTest
+    public void bookCombinationRespectsConfiguredMaximumEnchantmentLevel(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        int maximum = sharpness.value().getMaxLevel();
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, maximum - 1)));
+        menu.getSlot(1).set(EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, maximum - 1)));
+        menu.createResult();
+
+        var output = menu.getSlot(2).getItem();
+        helper.assertTrue(!output.isEmpty(), "Merging two enchanted books should produce an output");
+        helper.assertTrue(EnchantmentHelper.getEnchantmentsForCrafting(output).getLevel(sharpness) == maximum,
+                "Book merge should respect the data-driven enchantment limit of " + maximum);
+        helper.succeed();
+    }
+
+    @GameTest
+    public void repairingHighlyEnchantedEquipmentPreservesEnchantments(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        int maximum = sharpness.value().getMaxLevel();
+        var sword = new ItemStack(Items.DIAMOND_SWORD);
+        sword.setDamageValue(200);
+        EnchantmentHelper.updateEnchantments(sword, mutable -> mutable.set(sharpness, maximum));
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(sword);
+        menu.getSlot(1).set(new ItemStack(Items.DIAMOND));
+        menu.createResult();
+
+        var output = menu.getSlot(2).getItem();
+        helper.assertTrue(!output.isEmpty() && output.getDamageValue() == 0,
+                "Repair must preserve vanilla material and durability semantics");
+        helper.assertTrue(EnchantmentHelper.getEnchantmentsForCrafting(output).getLevel(sharpness) == maximum,
+                "Repair must not downgrade data-driven enchantment levels");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void impossibleEnchantmentsDoNotBecomeValidAfterDiscount(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var falling = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.FEATHER_FALLING);
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(new ItemStack(Items.DIAMOND_SWORD));
+        menu.getSlot(1).set(EnchantmentHelper.createBook(new EnchantmentInstance(falling, 1)));
+        menu.createResult();
+
+        helper.assertTrue(menu.getSlot(2).getItem().isEmpty() && menu.getCost() == 0,
+                "Discounts cannot apply an unsupported enchantment to a sword");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void renameCombinedWithEnchantmentHasNoRenameOnlyCapException(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var menu = enchantedSwordMenu(helper, player, 196);
+        menu.setItemName("Sword with Sharpness");
+        menu.createResult();
+        helper.assertTrue(menu.getCost() == 101 && !menu.getSlot(2).hasItem(),
+                "Renaming plus enchanting must not bypass the 100-level cap");
+        helper.succeed();
+    }
+
     private AnvilMenu enchantedSwordMenu(GameTestHelper helper, Player player, int repairCost) {
         var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
         var sword = new ItemStack(Items.DIAMOND_SWORD);
