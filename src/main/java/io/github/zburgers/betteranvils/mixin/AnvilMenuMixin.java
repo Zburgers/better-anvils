@@ -1,12 +1,14 @@
 package io.github.zburgers.betteranvils.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
+import com.llamalad7.mixinextras.sugar.Local;
 import io.github.zburgers.betteranvils.AnvilCostPolicy;
 import io.github.zburgers.betteranvils.BetterAnvils;
 import net.minecraft.world.inventory.AnvilMenu;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 
 @Mixin(AnvilMenu.class)
@@ -20,6 +22,15 @@ abstract class AnvilMenuMixin {
             return original;
         }
         return AnvilCostPolicy.discountedCost(Math.toIntExact(original), BetterAnvils.activeConfig()).orElseThrow();
+    }
+
+    @ModifyArg(
+            method = "createResult",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/util/Mth;clamp(JJJ)J"),
+            index = 0
+    )
+    private long betterAnvils$excludePriorWorkTax(long original, @Local(index = 3) long priorWorkTax) {
+        return BetterAnvils.activeConfig().preservePriorWorkPenalty() ? original : original - priorWorkTax;
     }
 
     @ModifyConstant(method = "createResult", constant = @Constant(intValue = 40, ordinal = 1))

@@ -1,6 +1,7 @@
 package io.github.zburgers.betteranvils.test;
 
 import io.github.zburgers.betteranvils.AnvilCostPolicy;
+import io.github.zburgers.betteranvils.BetterAnvils;
 import io.github.zburgers.betteranvils.config.BetterAnvilsConfig;
 import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.registries.Registries;
@@ -42,7 +43,26 @@ public final class AnvilGameTests {
     public void maximumNormalCostIsAllowed(GameTestHelper helper) {
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var menu = enchantedSwordMenu(helper, player, 194);
+        var output = menu.getSlot(2).getItem();
         helper.assertTrue(menu.getCost() == 100 && menu.getSlot(2).hasItem(), "Cost 100 should remain selectable");
+        helper.assertTrue(output.getOrDefault(DataComponents.REPAIR_COST, 0) == AnvilMenu.calculateIncreasedRepairCost(194), "Prior-work metadata should grow independently of the XP discount");
+        helper.succeed();
+    }
+
+    @GameTest
+    public void disablingPriorWorkTaxKeepsMetadataGrowth(GameTestHelper helper) throws Exception {
+        var service = BetterAnvils.configService();
+        var original = BetterAnvils.activeConfig();
+        try {
+            service.save(new BetterAnvilsConfig(original.maximumAnvilCost(), original.anvilDiscountPercent(), original.minimumAnvilCost(), false));
+            var player = helper.makeMockPlayer(GameType.SURVIVAL);
+            var menu = enchantedSwordMenu(helper, player, 194);
+            var output = menu.getSlot(2).getItem();
+            helper.assertTrue(menu.getCost() == 3, "Ignoring prior-work XP tax should discount only the enchantment cost");
+            helper.assertTrue(output.getOrDefault(DataComponents.REPAIR_COST, 0) == AnvilMenu.calculateIncreasedRepairCost(194), "Prior-work metadata should still grow normally");
+        } finally {
+            service.save(original);
+        }
         helper.succeed();
     }
 
