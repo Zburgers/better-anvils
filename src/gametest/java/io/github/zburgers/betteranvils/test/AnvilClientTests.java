@@ -7,6 +7,7 @@ import io.github.zburgers.betteranvils.config.BetterAnvilsConfig;
 import io.github.zburgers.betteranvils.net.AnvilPolicyPayload;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import me.shedaniel.clothconfig2.gui.ClothConfigScreen;
+import me.shedaniel.clothconfig2.gui.entries.BooleanListEntry;
 import me.shedaniel.clothconfig2.gui.entries.IntegerListEntry;
 import me.shedaniel.clothconfig2.gui.entries.IntegerSliderEntry;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
@@ -63,6 +64,8 @@ public final class AnvilClientTests implements FabricClientGameTest {
 
     private void exerciseSettingsScreen(ClientGameTestContext context) throws Exception {
         var current = BetterAnvils.activeConfig();
+        var configFile = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("better-anvils.json");
+        var beforeCancel = Files.readString(configFile);
         var cancelScreen = context.computeOnClient(client -> {
             var screen = (ClothConfigScreen) BetterAnvilsConfigScreen.create(client.gui.screen());
             var discount = entry(screen, "Anvil discount", IntegerSliderEntry.class);
@@ -83,6 +86,9 @@ public final class AnvilClientTests implements FabricClientGameTest {
                 throw new AssertionError("Cancel must leave active settings unchanged");
             }
         });
+        if (!Files.readString(configFile).equals(beforeCancel)) {
+            throw new AssertionError("Cancel must leave the saved config file unchanged");
+        }
 
         context.runOnClient(client -> {
             var screen = (ClothConfigScreen) BetterAnvilsConfigScreen.create(client.gui.screen());
@@ -101,23 +107,58 @@ public final class AnvilClientTests implements FabricClientGameTest {
                 throw new AssertionError("Saving 75% should update the integrated-server anvil price");
             }
         });
-        var savedJson = Files.readString(net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("better-anvils.json"));
+        var savedJson = Files.readString(configFile);
         if (!savedJson.contains("\"anvilDiscountPercent\": 75")) {
             throw new AssertionError("Save should write the selected discount to the config file");
         }
 
         context.runOnClient(client -> {
             var screen = (ClothConfigScreen) BetterAnvilsConfigScreen.create(client.gui.screen());
+            var maximum = entry(screen, "Maximum anvil cost", IntegerListEntry.class);
             var discount = entry(screen, "Anvil discount", IntegerSliderEntry.class);
+            var minimum = entry(screen, "Minimum nonzero cost", IntegerListEntry.class);
+            maximum.setValue(maximum.getDefaultValue().orElseThrow().toString());
             discount.setValue(discount.getDefaultValue().orElseThrow());
-            if (BetterAnvils.activeConfig().anvilDiscountPercent() != 75) {
+            minimum.setValue(minimum.getDefaultValue().orElseThrow().toString());
+            if (!BetterAnvils.activeConfig().equals(new BetterAnvilsConfig(150, 75, 1, true))) {
                 throw new AssertionError("Resetting the draft must wait for Save");
             }
             screen.saveAll(false);
         });
-        context.waitFor(client -> BetterAnvils.activeConfig().anvilDiscountPercent() == 50);
-        context.waitFor(client -> ClientPolicyState.effectiveConfig().anvilDiscountPercent() == 50);
+        context.waitFor(client -> BetterAnvils.activeConfig().equals(BetterAnvilsConfig.defaults()));
+        context.waitFor(client -> ClientPolicyState.effectiveConfig().equals(BetterAnvilsConfig.defaults()));
+        context.runOnClient(client -> {
+            var menu = sharpnessMenu(client, client.player);
+            if (menu.getCost() != 100 || !menu.getSlot(2).hasItem()) {
+                throw new AssertionError("Resetting defaults should restore the 100-level anvil result");
+            }
+        });
+        var resetJson = Files.readString(configFile);
+        if (!resetJson.contains("\"maximumAnvilCost\": 100")
+                || !resetJson.contains("\"anvilDiscountPercent\": 50")
+                || !resetJson.contains("\"minimumAnvilCost\": 1")
+                || !resetJson.contains("\"preservePriorWorkPenalty\": true")) {
+            throw new AssertionError("Saving reset defaults should persist the full settings snapshot");
+        }
 
+        var defaultScreen = context.computeOnClient(client -> {
+            var screen = (ClothConfigScreen) BetterAnvilsConfigScreen.create(client.gui.screen());
+            if (entry(screen, "Maximum anvil cost", IntegerListEntry.class).getValue() != 100
+                    || entry(screen, "Anvil discount", IntegerSliderEntry.class).getValue() != 50
+                    || entry(screen, "Minimum nonzero cost", IntegerListEntry.class).getValue() != 1
+                    || !entry(screen, "Preserve prior work XP penalty", BooleanListEntry.class).getValue()) {
+                throw new AssertionError("Settings screen should present the documented defaults");
+            }
+            client.setScreenAndShow(screen);
+            return screen;
+        });
+        context.waitForScreen(ClothConfigScreen.class);
+        context.takeScreenshot("better-anvils-config-default");
+        if (!context.tryClickScreenButton("Discard Changes")) {
+            context.runOnClient(client -> defaultScreen.onClose());
+        }
+
+        var beforeInvalid = Files.readString(configFile);
         context.runOnClient(client -> {
             var screen = (ClothConfigScreen) BetterAnvilsConfigScreen.create(client.gui.screen());
             entry(screen, "Maximum anvil cost", IntegerListEntry.class).setValue("1");
@@ -134,11 +175,14 @@ public final class AnvilClientTests implements FabricClientGameTest {
             throw new AssertionError("Invalid settings must disable Save & Quit");
         }
         context.runOnClient(client -> {
-            if (!BetterAnvils.activeConfig().equals(new BetterAnvilsConfig(150, 50, 1, true))) {
+            if (!BetterAnvils.activeConfig().equals(BetterAnvilsConfig.defaults())) {
                 throw new AssertionError("Invalid settings must not be saved");
             }
             client.gui.screen().onClose();
         });
+        if (!Files.readString(configFile).equals(beforeInvalid)) {
+            throw new AssertionError("Invalid settings must leave the saved config file unchanged");
+        }
     }
 
     private static <T extends AbstractConfigListEntry<?>> T entry(ClothConfigScreen screen, String label, Class<T> type) {

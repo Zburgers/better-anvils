@@ -22,6 +22,7 @@ class BetterAnvilsConfigTest {
     @Test
     void rejectsOutOfRangeValuesAndMinimumAboveMaximum() {
         assertTrue(new BetterAnvilsConfig(0, 50, 1, true).validationErrors().stream().anyMatch(e -> e.contains("maximumAnvilCost")));
+        assertTrue(new BetterAnvilsConfig(501, 50, 1, true).validationErrors().stream().anyMatch(e -> e.contains("maximumAnvilCost")));
         assertTrue(new BetterAnvilsConfig(100, -1, 1, true).validationErrors().stream().anyMatch(e -> e.contains("anvilDiscountPercent")));
         assertTrue(new BetterAnvilsConfig(100, 101, 1, true).validationErrors().stream().anyMatch(e -> e.contains("anvilDiscountPercent")));
         assertTrue(new BetterAnvilsConfig(100, 50, 0, true).validationErrors().stream().anyMatch(e -> e.contains("minimumAnvilCost")));
