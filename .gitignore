@@ -1,6 +1,7 @@
 .gradle/
 build/
 run/
+logs/
 *.iml
 .idea/
 

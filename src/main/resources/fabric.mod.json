@@ -8,7 +8,8 @@
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["io.github.zburgers.betteranvils.BetterAnvils"]
+    "main": ["io.github.zburgers.betteranvils.BetterAnvils"],
+    "client": ["io.github.zburgers.betteranvils.client.BetterAnvilsClient"]
   },
   "mixins": ["better-anvils.mixins.json"],
   "depends": {
