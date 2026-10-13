@@ -21,7 +21,7 @@ The clean build and client test tree is committed as `ffe6b57bda7f4783844fd7e53c
 - A dedicated server startup reached `Done` with optional GUI dependencies absent. A client smoke without Mod Menu and Cloth Config reached the main menu and loaded Better Anvils resources.
 - HigherEnchants 1.4 for 26.2 passed the compatibility profile: dynamic Sharpness VIII and pack-defined Sharpness/Smite compatibility were preserved. The externally acquired datapack was used only as a temporary local fixture and is not included in this repository.
 - `actionlint .github/workflows/build.yml`, jar inspection, and `git diff --check` passed.
-- [GitHub Actions run 38407341564](https://github.com/Zburgers/better-anvils/actions/runs/38407341564) passed all steps on implementation SHA `ee184f9c78053b75321edbfdd93a42c58b1edcff`, including the unit/GameTest build, client GameTests, dedicated-server startup, client startup without optional GUI mods, and artifact upload.
+- [GitHub Actions run 38410238219](https://github.com/Zburgers/better-anvils/actions/runs/38410238219) passed all steps on implementation SHA `e298a20067c3854ed40912fe5786242da3fc10b3`, including the unit/GameTest build, client GameTests, dedicated-server startup, client startup without optional GUI mods, and artifact upload.
 
 The step-by-step local results and outstanding acceptance cases are in the [acceptance matrix](testing/acceptance-matrix.md). Local logs live under `/tmp` and are not committed. The implementation SHA above was pushed and matched the remote branch; this later report-only update does not change source or workflow code.
 
@@ -52,8 +52,8 @@ The 26.2 Loom plugin uses the game's Mojang names in its non-obfuscated environm
 | 11 Config screen | Partial qualification | `eb5849f`, `7b2691c` | Save, cancel, reset, invalid draft, JSON write and integrated update tested; Mod Menu navigation and restart persistence not run. |
 | 12 HigherEnchants profile | Partial qualification | `c1aca75` | Dynamic Sharpness VIII and pack-defined compatible pair pass; a forbidden pair and repair of high-level gear not run. |
 | 13 Packaging, licensing, assets, docs | Complete | `20ec1e6`, `9873ddf` | Icon, screenshots, license, notices, install docs, and README instructions are present. |
-| 14 CI and artifact | Complete | `ffe6b57` | Java 25 workflow passed on `9873ddfd37a17839fd66d3b83bc0e281d733b8d6`; uploads jar, reports, logs and screenshots. |
-| 15 Final review and guarded handoff | Partial qualification | `ee184f9`, `9873ddf` | Source review, acceptance record, normal push, remote SHA verification and green CI completed; manual multiplayer, restart, and conflict gates remain open. |
+| 14 CI and artifact | Complete | `ffe6b57` | Java 25 workflow passed on `e298a20067c3854ed40912fe5786242da3fc10b3`; uploads jar, reports, logs and screenshots. |
+| 15 Final review and guarded handoff | Partial qualification | `ee184f9`, `9873ddf`, `e298a20` | Source review, acceptance record, normal push, remote SHA verification and green CI completed; manual multiplayer, restart, and conflict gates remain open. |
 
 ## C. Build evidence
 
@@ -68,7 +68,7 @@ The 26.2 Loom plugin uses the game's Mojang names in its non-obfuscated environm
 
 Build runtime versions: Java 25; Minecraft 26.2; Fabric Loader 0.19.3; Fabric API 0.161.0+26.2; Gradle wrapper 9.5.1; Mod Menu 20.0.3 and Cloth Config 26.2.155 for UI runs.
 
-The local distributable is `build/libs/better-anvils-1.0.0.jar` (1,142,550 bytes; SHA-256 `699e3ee735570920e8f6e7f69ff5fd1176407e2f11565be2ce7d5d197fc12718`). It contains the mod metadata, common/client classes, icon and English strings; it does not bundle HigherEnchants data, Mod Menu or Cloth Config classes, or Minecraft client classes. The sources jar is separate. The GitHub Actions artifact is available from the [green workflow run](https://github.com/Zburgers/better-anvils/actions/runs/38408502026) under artifact `better-anvils-9873ddfd37a17839fd66d3b83bc0e281d733b8d6`.
+The local distributable is `build/libs/better-anvils-1.0.0.jar` (1,142,550 bytes; SHA-256 `699e3ee735570920e8f6e7f69ff5fd1176407e2f11565be2ce7d5d197fc12718`). It contains the mod metadata, common/client classes, icon and English strings; it does not bundle HigherEnchants data, Mod Menu or Cloth Config classes, or Minecraft client classes. The sources jar is separate. The GitHub Actions artifact is available from the [green workflow run](https://github.com/Zburgers/better-anvils/actions/runs/38410238219) under artifact `better-anvils-e298a20067c3854ed40912fe5786242da3fc10b3`.
 
 ## D. Test evidence and distinctions
 
@@ -84,9 +84,9 @@ No launch-blocking defect was found in the local source review. The tests above 
 
 - Repository: [Zburgers/better-anvils](https://github.com/Zburgers/better-anvils)
 - Development branch: [`26.2-better-anvils`](https://github.com/Zburgers/better-anvils/tree/26.2-better-anvils)
-- Last full source and green-CI SHA recorded here: `9873ddfd37a17839fd66d3b83bc0e281d733b8d6` (report/README follow-up commits are documentation-only).
+- Full implementation, README, and green-CI SHA recorded here: `e298a20067c3854ed40912fe5786242da3fc10b3`. This handoff report is committed as a following documentation-only update.
 - Jar: `better-anvils-1.0.0.jar`; local path `build/libs/better-anvils-1.0.0.jar`; CI artifact linked above.
-- GitHub Actions: [run 38408502026 — success](https://github.com/Zburgers/better-anvils/actions/runs/38408502026).
+- GitHub Actions: [run 38410238219 — success](https://github.com/Zburgers/better-anvils/actions/runs/38410238219).
 - Required: Minecraft Java 26.2, Fabric Loader 0.19.3+, Fabric API 0.161.0+26.2, Java 25. Mod Menu 20.0.3 and Cloth Config 26.2.155 are optional client UI dependencies.
 - Install: build with `./gradlew build`, place the non-sources jar in `mods`, and install Better Anvils plus Fabric API on the server and each multiplayer client. See [README](../README.md) for settings and dedicated-server instructions.
 - Merge/release: not performed. Release readiness remains blocked by the qualification gaps above.
