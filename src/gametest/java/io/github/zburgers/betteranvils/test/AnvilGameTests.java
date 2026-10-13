@@ -17,6 +17,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.item.enchantment.Enchantment;
 
 public final class AnvilGameTests {
     @GameTest
@@ -180,18 +181,52 @@ public final class AnvilGameTests {
     }
 
     @GameTest
-    public void incompatibleEnchantmentsDoNotCreateResult(GameTestHelper helper) {
+    public void anvilHonorsDataDrivenEnchantmentCompatibility(GameTestHelper helper) {
         var player = helper.makeMockPlayer(GameType.SURVIVAL);
         var enchantments = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
         var sharpness = enchantments.getOrThrow(Enchantments.SHARPNESS);
         var smite = enchantments.getOrThrow(Enchantments.SMITE);
+        boolean compatible = Enchantment.areCompatible(sharpness, smite);
         var sword = new ItemStack(Items.DIAMOND_SWORD);
         EnchantmentHelper.updateEnchantments(sword, mutable -> mutable.set(sharpness, 5));
         var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
         menu.getSlot(0).set(sword);
         menu.getSlot(1).set(EnchantmentHelper.createBook(new EnchantmentInstance(smite, 5)));
         menu.createResult();
-        helper.assertTrue(!menu.getSlot(2).hasItem() && menu.getCost() == 0, "Incompatible enchantment-only operation should remain invalid");
+        if (compatible) {
+            var output = menu.getSlot(2).getItem();
+            helper.assertTrue(!output.isEmpty(), "Data-compatible enchantments should combine");
+            var resultEnchantments = EnchantmentHelper.getEnchantmentsForCrafting(output);
+            helper.assertTrue(resultEnchantments.getLevel(sharpness) == 5 && resultEnchantments.getLevel(smite) == 5,
+                    "Both data-compatible enchantments should remain on the result");
+        } else {
+            helper.assertTrue(!menu.getSlot(2).hasItem() && menu.getCost() == 0,
+                    "Data-incompatible enchantment-only operation should remain invalid");
+        }
+        helper.succeed();
+    }
+
+    @GameTest
+    public void datapackEnchantmentLevelsArePreserved(GameTestHelper helper) {
+        var player = helper.makeMockPlayer(GameType.SURVIVAL);
+        var sharpness = helper.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        int maximum = sharpness.value().getMaxLevel();
+        if (Boolean.getBoolean("betterAnvils.requireHigherEnchants")) {
+            helper.assertTrue(maximum == 8, "HigherEnchants 1.4 should set Sharpness maximum to 8; got " + maximum);
+        }
+        if (maximum <= 5) {
+            helper.succeed();
+            return;
+        }
+
+        var menu = new AnvilMenu(1, player.getInventory(), ContainerLevelAccess.NULL);
+        menu.getSlot(0).set(new ItemStack(Items.DIAMOND_SWORD));
+        menu.getSlot(1).set(EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, maximum)));
+        menu.createResult();
+        var output = menu.getSlot(2).getItem();
+        helper.assertTrue(!output.isEmpty(), "Datapack-supported high-level enchantment should be applicable");
+        helper.assertTrue(EnchantmentHelper.getEnchantmentsForCrafting(output).getLevel(sharpness) == maximum,
+                "Anvil output should preserve the datapack-defined enchantment level");
         helper.succeed();
     }
 
