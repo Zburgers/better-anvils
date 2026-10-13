@@ -145,177 +145,398 @@ Register a versioned clientbound policy payload with Fabric API and send on serv
 
 **Convention for every task:** create a focused failing test/check first (RED), implement only its scoped change, verify it (GREEN), inspect the diff, and create one descriptive commit. No parallel work on overlapping files. Record evidence (command, result, commit) in an execution summary only when actually run.
 
-<task id="01" name="Bootstrap 26.2 Fabric project">
-  <files>
-    <create>build.gradle</create><create>gradle.properties</create><create>settings.gradle</create>
-    <create>gradlew</create><create>gradlew.bat</create><create>gradle/wrapper/gradle-wrapper.properties</create><create>gradle/wrapper/gradle-wrapper.jar</create>
-    <create>src/main/resources/fabric.mod.json</create><create>src/main/java/io/github/zburgers/betteranvils/BetterAnvils.java</create><create>.gitignore</create>
-  </files>
-  <steps>
-    <step>Record exact Gradle/Loom/Loader/API resolved versions and capture a baseline `./gradlew --version`.</step>
-    <step>Write metadata assertions/verification task that expects mod id `better-anvils`, exact Minecraft 26.2, Java 25, and client/common source sets.</step>
-    <step>Scaffold project using `net.fabricmc.fabric-loom` (NO Yarn remap dependency for 26.2), source-set separation and a no-op initializer.</step>
-    <step>Run `./gradlew clean build --stacktrace` and correct real build errors.</step>
-    <step>Commit `chore: bootstrap Fabric 26.2 project`.</step>
-  </steps>
-  <verification><command>./gradlew clean build --stacktrace</command><expected>exit 0; source jar and main mod jar emitted; no unresolved dependencies</expected></verification>
-</task>
+### Task 01: Bootstrap 26.2 Fabric project
 
-<task id="02" name="Define validated configuration schema">
-  <files><create>src/main/java/io/github/zburgers/betteranvils/config/BetterAnvilsConfig.java</create><create>src/test/java/io/github/zburgers/betteranvils/config/ConfigServiceTest.java</create></files>
-  <steps>
-    <step>Write tests asserting exact defaults, upper/lower bounds, `minimum <= maximum`, immutable snapshot/copy behavior, and rejection of NaN/non-integer or JSON type mismatches.</step>
-    <step>Run `./gradlew test --tests '*ConfigServiceTest'` (RED).</step>
-    <step>Implement a typed config DTO and pure validation with field-specific errors.</step>
-    <step>Run the same targeted test (GREEN) and commit `feat: define validated anvil settings`.</step>
-  </steps>
-  <verification><command>./gradlew test --tests '*ConfigServiceTest'</command><expected>exit 0; defaults 100/50/1/true; bad values rejected</expected></verification>
-</task>
+**Files to create**
 
-<task id="03" name="Persist JSON safely">
-  <files><create>src/main/java/io/github/zburgers/betteranvils/config/ConfigService.java</create><modify>src/test/java/io/github/zburgers/betteranvils/config/ConfigServiceTest.java</modify></files>
-  <steps>
-    <step>Write round-trip tests using temporary directories for file-absent defaults, Save, reload, Reset-then-Save, Cancel-no-write, invalid JSON, invalid ranges, and simulated failed writes.</step>
-    <step>Run focused tests (RED); implement Gson-based persistence with UTF-8, temporary-file write and atomic replacement where supported.</step>
-    <step>Keep last valid settings on I/O failure and provide explicit logger/UI warning; never silently corrupt config.</step>
-    <step>Run test (GREEN) and commit `feat: persist anvil settings atomically`.</step>
-  </steps>
-  <verification><command>./gradlew test --tests '*ConfigServiceTest'</command><expected>exit 0; JSON file round-trips; malformed config is handled without data loss</expected></verification>
-</task>
+- `build.gradle`
+- `gradle.properties`
+- `settings.gradle`
+- `gradlew`
+- `gradlew.bat`
+- `gradle/wrapper/gradle-wrapper.properties`
+- `gradle/wrapper/gradle-wrapper.jar`
+- `src/main/resources/fabric.mod.json`
+- `src/main/java/io/github/zburgers/betteranvils/BetterAnvils.java`
+- `.gitignore`
 
-<task id="04" name="Add pure cost policy with overflow-safe math">
-  <files><create>src/main/java/io/github/zburgers/betteranvils/AnvilCostPolicy.java</create><create>src/test/java/io/github/zburgers/betteranvils/AnvilCostPolicyTest.java</create></files>
-  <steps>
-    <step>Write parameterized JUnit inputs `(1,1), (59,30), (79,40), (119,60), (197,99), (199,100), (200,100), (201,101)` under 50%; add 0/25/75/100 percent and Integer.MAX_VALUE safety.</step>
-    <step>Run `./gradlew test --tests '*AnvilCostPolicyTest'` (RED).</step>
-    <step>Implement precondition `originalCost > 0` and `max(minCost, (originalCost * (100L - discount) + 99L) / 100L)`, then clamp to integer only after safe arithmetic.</step>
-    <step>Make permit decision `cost <= maximum`; ensure pure math never invents an item/result.</step>
-    <step>Run test (GREEN) and commit `feat: calculate discounted costs and final cap`.</step>
-  </steps>
-  <verification><command>./gradlew test --tests '*AnvilCostPolicyTest'</command><expected>exit 0; exact ceil rounding and inclusive max; no overflow</expected></verification>
-</task>
+**Implementation steps**
 
-<task id="05" name="Hook computed cost without altering vanilla enchant logic">
-  <files><create>src/main/java/io/github/zburgers/betteranvils/mixin/AnvilMenuMixin.java</create><create>src/main/resources/better-anvils.mixins.json</create><modify>src/main/resources/fabric.mod.json</modify><create>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java</create><create>src/gametest/resources/fabric.mod.json</create></files>
-  <steps>
-    <step>Configure Fabric Loom GameTest source set and a fixture whose vanilla result/cost is known.</step>
-    <step>Write RED GameTests for unchanged valid output components and halved computed XP cost.</step>
-    <step>Examine 26.2 `AnvilMenu.createResult` compiled bytecode; choose stable cost expression injection **before** vanilla 40 check and after vanilla validity determination.</step>
-    <step>Pass the policy snapshot to pure cost helper and alter only its final XP cost; leave `price<=0`, empty result paths and item mutation intact.</step>
-    <step>Run GameTests, inspect Mixin apply logs and commit `feat: discount valid anvil results`.</step>
-  </steps>
-  <verification><command>./gradlew tasks --all</command><expected>exit 0; exposes Loom GameTest tasks; record exact selected task name before running it</expected></verification>
-</task>
+1. Record exact Gradle/Loom/Loader/API resolved versions and capture a baseline `./gradlew --version`.
+2. Write metadata assertions/verification task that expects mod id `better-anvils`, exact Minecraft 26.2, Java 25, and client/common source sets.
+3. Scaffold project using `net.fabricmc.fabric-loom` (NO Yarn remap dependency for 26.2), source-set separation and a no-op initializer.
+4. Run `./gradlew clean build --stacktrace` and correct real build errors.
+5. Commit `chore: bootstrap Fabric 26.2 project`.
 
-<task id="06" name="Raise survival threshold and preserve rename exception">
-  <files><modify>src/main/java/io/github/zburgers/betteranvils/mixin/AnvilMenuMixin.java</modify><modify>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java</modify></files>
-  <steps>
-    <step>Write RED GameTests for final cost 99/100 permitted and 101 rejected, creative mode unchanged, and rename-only exemption at configurable maximum.</step>
-    <step>Inspect and target the **two** threshold 40 constants and the rename-only 39 assignment; **do not modify** the separate `price=40` stacked-item penalty.</step>
-    <step>Make threshold `maximum + 1` (safe at supported max 500), and rename-only replacement `maximum`; use constrained injectors with fail-fast apply assertions.</step>
-    <step>Run GameTests and commit `feat: enforce configurable post-discount anvil limit`.</step>
-  </steps>
-  <verification><command>./gradlew build</command><expected>exit 0; GameTests independently prove 100 valid, 101 invalid, rename-only semantics and unmodified penalty</expected></verification>
-</task>
+**Verification command**
 
-<task id="07" name="Support optional prior-work XP-tax exclusion">
-  <files><modify>src/main/java/io/github/zburgers/betteranvils/mixin/AnvilMenuMixin.java</modify><modify>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java</modify></files>
-  <steps>
-    <step>Write tests for default prior-work true = vanilla cost before discount; false = ignore only accumulated XP tax; REPAIR_COST output component and its growth unchanged in both cases.</step>
-    <step>Inspect injection seam specifically around the two initial REPAIR_COST reads used for `tax`, not later reads used for result metadata.</step>
-    <step>Implement a narrow tax expression/local adjustment; if no safe injection exists, block and revise plan rather than rewriting vanilla anvil code.</step>
-    <step>Run GameTests and commit `feat: optionally exclude prior-work XP tax`.</step>
-  </steps>
-  <verification><command>./gradlew build</command><expected>exit 0 plus confirmed GameTests: difference only in XP cost, never in item prior-work metadata</expected></verification>
-</task>
+```bash
+./gradlew clean build --stacktrace
+```
 
-<task id="08" name="Prove XP charge and vanilla invariants">
-  <files><modify>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java</modify></files>
-  <steps>
-    <step>Write tests for inadequate XP pickup denial; successful pickup deducts exact displayed level count; rename/repair/book merging; incompatible enchants; no-op; and anvil onTake uses vanilla behavior.</step>
-    <step>Build fixture for survival player; test cost before/after pickup and inventory, output enchantments, item component equality and durability.</step>
-    <step>Only fix focused regressions in existing mixins; do not override `onTake`.</step>
-    <step>Commit `test: verify XP and vanilla anvil invariants`.</step>
-  </steps>
-  <verification><command>./gradlew build</command><expected>exit 0 plus passing game tests for exact XP and output invariants</expected></verification>
-</task>
+**Expected result:** exit 0; source jar and main mod jar emitted; no unresolved dependencies
 
-<task id="09" name="Synchronize server policy to connected clients">
-  <files><create>src/main/java/io/github/zburgers/betteranvils/net/AnvilPolicyPayload.java</create><create>src/main/java/io/github/zburgers/betteranvils/net/PolicyNetworking.java</create><modify>src/main/java/io/github/zburgers/betteranvils/BetterAnvils.java</modify><create>src/client/java/io/github/zburgers/betteranvils/client/BetterAnvilsClient.java</create><create>src/client/java/io/github/zburgers/betteranvils/client/ClientPolicyState.java</create></files>
-  <steps>
-    <step>Write codec round-trip tests for values and version/schema rejection. Arrange client/server integration test for login, reconnect, and server refresh.</step>
-    <step>Register Fabric API clientbound payload; send authoritative snapshot on player JOIN and on server policy refresh; register client receiver only in client entrypoint.</step>
-    <step>Update cached session policy on client render/game thread; clear on disconnect; never accept a remote client's settings for server pricing.</step>
-    <step>Test dedicated vs integrated server and commit `feat: synchronize authoritative anvil policy`.</step>
-  </steps>
-  <verification><command>./gradlew build</command><expected>exit 0; client policy equals server after JOIN/reconnect; server jar launches headless without client classes</expected></verification>
-</task>
 
-<task id="10" name="Fix anvil UI thresholds and client prediction">
-  <files><create>src/client/java/io/github/zburgers/betteranvils/mixin/client/AnvilScreenMixin.java</create><modify>src/main/resources/better-anvils.mixins.json</modify><create>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilClientTests.java</create></files>
-  <steps>
-    <step>Write RED client tests for cost 40 and 100 showing level cost rather than 'Too Expensive'; 101 showing unavailable; insufficient XP text color; client/server config mismatch.</step>
-    <step>Patch only GUI `AnvilScreen.extractLabels` threshold 40 to session server maximum+1; rely on server-authoritative DataSlot for displayed cost.</step>
-    <step>Ensure local client anvil recomputation cannot leave ghost result/pickup after server rejects; if necessary align client createResult with synced policy.</step>
-    <step>Run client GameTests and commit `fix: display authoritative high anvil costs`.</step>
-  </steps>
-  <verification><command>./gradlew build</command><expected>exit 0; client screenshot/assertion shows 100 cost, rejects 101, and matches server during mismatch</expected></verification>
-</task>
+### Task 02: Define validated configuration schema
 
-<task id="11" name="Build Mod Menu / Cloth Config settings screen">
-  <files><create>src/client/java/io/github/zburgers/betteranvils/client/BetterAnvilsConfigScreen.java</create><create>src/client/java/io/github/zburgers/betteranvils/client/ModMenuIntegration.java</create><modify>src/main/resources/fabric.mod.json</modify><create>src/main/resources/assets/better-anvils/lang/en_us.json</create><modify>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilClientTests.java</modify></files>
-  <steps>
-    <step>Write RED GUI flows: Mod Menu config button exists; controls show saved defaults; slider 50→75; Save writes JSON; Esc/Cancel never saves; Reset only saves on Save; invalid minimum > maximum blocked.</step>
-    <step>Use Mod Menu `ModMenuApi#getModConfigScreenFactory` and Cloth Config `ConfigBuilder`; state is a separate draft until Save. Local singleplayer Save persists and updates integrated server policy; UI tells player to close/reopen anvil.</step>
-    <step>When connected to dedicated server, show server-controlled read-only explanation; no misleading local settings that appear to modify server rules. Gracefully handle missing optional GUI mods without crashing core gameplay.</step>
-    <step>Run GUI tests, manually review 26.2 screen appearance/accessibility and commit `feat: add automatic in-game config editor`.</step>
-  </steps>
-  <verification><command>./gradlew build</command><expected>exit 0; GUI Save persists, Cancel discards; singleplayer behavior changes after reopening anvil</expected></verification>
-</task>
+**Files to create**
 
-<task id="12" name="HigherEnchants and clean-profile compatibility">
-  <files><modify>src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java</modify><create>docs/testing/acceptance-matrix.md</create></files>
-  <steps>
-    <step>Use independent 26.2 profiles: vanilla/no datapack and 26.2 HigherEnchants 1.4 enabled and reloaded from its separate public distribution.</step>
-    <step>Test enchanted books combinations, extra levels, newly compatible enchantment pairs, armor/weapons/tools, repaired high-enchant equipment and denied incompatible pairs.</step>
-    <step>Inspect produced jar contents for absence of `data/minecraft/enchantment/` and HigherEnchants assets; do not alter registry/data-driven max levels.</step>
-    <step>Record actual PASS/FAIL/SKIPPED evidence for both profiles; commit `test: verify HigherEnchants compatibility`.</step>
-  </steps>
-  <verification><command>jar tf build/libs/better-anvils-*.jar</command><expected>no bundled HigherEnchants files, no overwritten enchantment JSON; actual play tests recorded separately</expected></verification>
-</task>
+- `src/main/java/io/github/zburgers/betteranvils/config/BetterAnvilsConfig.java`
+- `src/test/java/io/github/zburgers/betteranvils/config/ConfigServiceTest.java`
 
-<task id="13" name="Packaging, assets, licensing and installation docs">
-  <files><modify>README.md</modify><create>LICENSE</create><create>THIRD_PARTY_NOTICES.md</create><create>src/main/resources/assets/better-anvils/icon.png</create><modify>src/main/resources/fabric.mod.json</modify></files>
-  <steps>
-    <step>Document server+client installation, Java 25/Fabric 26.2/required Fabric API, optional Mod Menu + Cloth Config, exact menu path and JSON path, dedicated-server management/restart, default/valid ranges, conflict caveats.</step>
-    <step>Include MIT attribution/license notice for upstream Too Cheap where code/hooks are adapted. Do not copy upstream branding/icon or redistributable HigherEnchants data.</step>
-    <step>Validate resource paths and translation strings; use original icon asset (or defer icon if artwork isn't licensed), ensure jar and -sources jar are clearly separated in README.</step>
-    <step>Commit `docs: document Better Anvils install and provenance`.</step>
-  </steps>
-  <verification><command>./gradlew clean build</command><expected>exit 0; main jar fabric.mod.json valid; licenses/translation assets included, no datapack</expected></verification>
-</task>
+**Implementation steps**
 
-<task id="14" name="Build CI with executable evidence">
-  <files><create>.github/workflows/build.yml</create><modify>build.gradle</modify><modify>docs/testing/acceptance-matrix.md</modify></files>
-  <steps>
-    <step>Configure push/PR GitHub Actions on Java 25, Gradle wrapper validation, `./gradlew clean test build`, game test launch tasks (discover names with `./gradlew tasks --all`), server smoke start, and client smoke where CI display runner permits.</step>
-    <step>Upload test reports, logs and the single distributable jar as build artifacts; never report skipped manual tests as passed.</step>
-    <step>Add separate job or matrix smoke with/without Mod Menu/Cloth Config to ensure optional-dependency safety and no server-side client imports.</step>
-    <step>Commit `ci: verify build and in-game compatibility`.</step>
-  </steps>
-  <verification><command>./gradlew clean test build --stacktrace</command><expected>exit 0 locally AND green GitHub Actions for same SHA, with stored reports/artifact</expected></verification>
-</task>
+1. Write tests asserting exact defaults, upper/lower bounds, `minimum <= maximum`, immutable snapshot/copy behavior, and rejection of NaN/non-integer or JSON type mismatches.
+2. Run `./gradlew test --tests '*ConfigServiceTest'` (RED).
+3. Implement a typed config DTO and pure validation with field-specific errors.
+4. Run the same targeted test (GREEN) and commit `feat: define validated anvil settings`.
 
-<task id="15" name="Release-candidate review and guarded handoff">
-  <files><modify>docs/testing/acceptance-matrix.md</modify><modify>README.md</modify></files>
-  <steps>
-    <step>Inspect entire diff against this plan; recheck requirement traceability, licence, artifact contents, mixin targets, invalid combos, multiplayer sync and no client classes on server.</step>
-    <step>Actually run server startup, singleplayer client, LAN/dedicated client, config Save→restart persistence, HigherEnchants profile and clean profile. Capture versions, game logs, screenshot and results.</step>
-    <step>Perform independent code review and fix all launch-blocking/high-severity findings; rerun full suite and ensure CI's green commit SHA equals reviewed branch HEAD.</step>
-    <step>Push normal fast-forward commits to `26.2-better-anvils`; verify SHA remotely. Produce the jar filename, test matrix and installation instructions. Make a PR if desired, but do not merge/release without approval.</step>
-  </steps>
-  <verification><command>git rev-parse HEAD && git ls-remote origin refs/heads/26.2-better-anvils</command><expected>both full SHA values match; actual executable jar built; all mandatory tests PASS</expected></verification>
-</task>
+**Verification command**
+
+```bash
+./gradlew test --tests '*ConfigServiceTest'
+```
+
+**Expected result:** exit 0; defaults 100/50/1/true; bad values rejected
+
+
+### Task 03: Persist JSON safely
+
+**Files to create**
+
+- `src/main/java/io/github/zburgers/betteranvils/config/ConfigService.java`
+
+**Files to modify**
+
+- `src/test/java/io/github/zburgers/betteranvils/config/ConfigServiceTest.java`
+
+**Implementation steps**
+
+1. Write round-trip tests using temporary directories for file-absent defaults, Save, reload, Reset-then-Save, Cancel-no-write, invalid JSON, invalid ranges, and simulated failed writes.
+2. Run focused tests (RED); implement Gson-based persistence with UTF-8, temporary-file write and atomic replacement where supported.
+3. Keep last valid settings on I/O failure and provide explicit logger/UI warning; never silently corrupt config.
+4. Run test (GREEN) and commit `feat: persist anvil settings atomically`.
+
+**Verification command**
+
+```bash
+./gradlew test --tests '*ConfigServiceTest'
+```
+
+**Expected result:** exit 0; JSON file round-trips; malformed config is handled without data loss
+
+
+### Task 04: Add pure cost policy with overflow-safe math
+
+**Files to create**
+
+- `src/main/java/io/github/zburgers/betteranvils/AnvilCostPolicy.java`
+- `src/test/java/io/github/zburgers/betteranvils/AnvilCostPolicyTest.java`
+
+**Implementation steps**
+
+1. Write parameterized JUnit inputs `(1,1), (59,30), (79,40), (119,60), (197,99), (199,100), (200,100), (201,101)` under 50%; add 0/25/75/100 percent and Integer.MAX_VALUE safety.
+2. Run `./gradlew test --tests '*AnvilCostPolicyTest'` (RED).
+3. Implement precondition `originalCost > 0` and `max(minCost, (originalCost * (100L - discount) + 99L) / 100L)`, then clamp to integer only after safe arithmetic.
+4. Make permit decision `cost <= maximum`; ensure pure math never invents an item/result.
+5. Run test (GREEN) and commit `feat: calculate discounted costs and final cap`.
+
+**Verification command**
+
+```bash
+./gradlew test --tests '*AnvilCostPolicyTest'
+```
+
+**Expected result:** exit 0; exact ceil rounding and inclusive max; no overflow
+
+
+### Task 05: Hook computed cost without altering vanilla enchant logic
+
+**Files to create**
+
+- `src/main/java/io/github/zburgers/betteranvils/mixin/AnvilMenuMixin.java`
+- `src/main/resources/better-anvils.mixins.json`
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java`
+- `src/gametest/resources/fabric.mod.json`
+
+**Files to modify**
+
+- `src/main/resources/fabric.mod.json`
+
+**Implementation steps**
+
+1. Configure Fabric Loom GameTest source set and a fixture whose vanilla result/cost is known.
+2. Write RED GameTests for unchanged valid output components and halved computed XP cost.
+3. Examine 26.2 `AnvilMenu.createResult` compiled bytecode; choose stable cost expression injection **before** vanilla 40 check and after vanilla validity determination.
+4. Pass the policy snapshot to pure cost helper and alter only its final XP cost; leave `price<=0`, empty result paths and item mutation intact.
+5. Run GameTests, inspect Mixin apply logs and commit `feat: discount valid anvil results`.
+
+**Verification command**
+
+```bash
+./gradlew tasks --all
+```
+
+**Expected result:** exit 0; exposes Loom GameTest tasks; record exact selected task name before running it
+
+
+### Task 06: Raise survival threshold and preserve rename exception
+
+**Files to modify**
+
+- `src/main/java/io/github/zburgers/betteranvils/mixin/AnvilMenuMixin.java`
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java`
+
+**Implementation steps**
+
+1. Write RED GameTests for final cost 99/100 permitted and 101 rejected, creative mode unchanged, and rename-only exemption at configurable maximum.
+2. Inspect and target the **two** threshold 40 constants and the rename-only 39 assignment; **do not modify** the separate `price=40` stacked-item penalty.
+3. Make threshold `maximum + 1` (safe at supported max 500), and rename-only replacement `maximum`; use constrained injectors with fail-fast apply assertions.
+4. Run GameTests and commit `feat: enforce configurable post-discount anvil limit`.
+
+**Verification command**
+
+```bash
+./gradlew build
+```
+
+**Expected result:** exit 0; GameTests independently prove 100 valid, 101 invalid, rename-only semantics and unmodified penalty
+
+
+### Task 07: Support optional prior-work XP-tax exclusion
+
+**Files to modify**
+
+- `src/main/java/io/github/zburgers/betteranvils/mixin/AnvilMenuMixin.java`
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java`
+
+**Implementation steps**
+
+1. Write tests for default prior-work true = vanilla cost before discount; false = ignore only accumulated XP tax; REPAIR_COST output component and its growth unchanged in both cases.
+2. Inspect injection seam specifically around the two initial REPAIR_COST reads used for `tax`, not later reads used for result metadata.
+3. Implement a narrow tax expression/local adjustment; if no safe injection exists, block and revise plan rather than rewriting vanilla anvil code.
+4. Run GameTests and commit `feat: optionally exclude prior-work XP tax`.
+
+**Verification command**
+
+```bash
+./gradlew build
+```
+
+**Expected result:** exit 0 plus confirmed GameTests: difference only in XP cost, never in item prior-work metadata
+
+
+### Task 08: Prove XP charge and vanilla invariants
+
+**Files to modify**
+
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java`
+
+**Implementation steps**
+
+1. Write tests for inadequate XP pickup denial; successful pickup deducts exact displayed level count; rename/repair/book merging; incompatible enchants; no-op; and anvil onTake uses vanilla behavior.
+2. Build fixture for survival player; test cost before/after pickup and inventory, output enchantments, item component equality and durability.
+3. Only fix focused regressions in existing mixins; do not override `onTake`.
+4. Commit `test: verify XP and vanilla anvil invariants`.
+
+**Verification command**
+
+```bash
+./gradlew build
+```
+
+**Expected result:** exit 0 plus passing game tests for exact XP and output invariants
+
+
+### Task 09: Synchronize server policy to connected clients
+
+**Files to create**
+
+- `src/main/java/io/github/zburgers/betteranvils/net/AnvilPolicyPayload.java`
+- `src/main/java/io/github/zburgers/betteranvils/net/PolicyNetworking.java`
+- `src/client/java/io/github/zburgers/betteranvils/client/BetterAnvilsClient.java`
+- `src/client/java/io/github/zburgers/betteranvils/client/ClientPolicyState.java`
+
+**Files to modify**
+
+- `src/main/java/io/github/zburgers/betteranvils/BetterAnvils.java`
+
+**Implementation steps**
+
+1. Write codec round-trip tests for values and version/schema rejection. Arrange client/server integration test for login, reconnect, and server refresh.
+2. Register Fabric API clientbound payload; send authoritative snapshot on player JOIN and on server policy refresh; register client receiver only in client entrypoint.
+3. Update cached session policy on client render/game thread; clear on disconnect; never accept a remote client's settings for server pricing.
+4. Test dedicated vs integrated server and commit `feat: synchronize authoritative anvil policy`.
+
+**Verification command**
+
+```bash
+./gradlew build
+```
+
+**Expected result:** exit 0; client policy equals server after JOIN/reconnect; server jar launches headless without client classes
+
+
+### Task 10: Fix anvil UI thresholds and client prediction
+
+**Files to create**
+
+- `src/client/java/io/github/zburgers/betteranvils/mixin/client/AnvilScreenMixin.java`
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilClientTests.java`
+
+**Files to modify**
+
+- `src/main/resources/better-anvils.mixins.json`
+
+**Implementation steps**
+
+1. Write RED client tests for cost 40 and 100 showing level cost rather than 'Too Expensive'; 101 showing unavailable; insufficient XP text color; client/server config mismatch.
+2. Patch only GUI `AnvilScreen.extractLabels` threshold 40 to session server maximum+1; rely on server-authoritative DataSlot for displayed cost.
+3. Ensure local client anvil recomputation cannot leave ghost result/pickup after server rejects; if necessary align client createResult with synced policy.
+4. Run client GameTests and commit `fix: display authoritative high anvil costs`.
+
+**Verification command**
+
+```bash
+./gradlew build
+```
+
+**Expected result:** exit 0; client screenshot/assertion shows 100 cost, rejects 101, and matches server during mismatch
+
+
+### Task 11: Build Mod Menu / Cloth Config settings screen
+
+**Files to create**
+
+- `src/client/java/io/github/zburgers/betteranvils/client/BetterAnvilsConfigScreen.java`
+- `src/client/java/io/github/zburgers/betteranvils/client/ModMenuIntegration.java`
+- `src/main/resources/assets/better-anvils/lang/en_us.json`
+
+**Files to modify**
+
+- `src/main/resources/fabric.mod.json`
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilClientTests.java`
+
+**Implementation steps**
+
+1. Write RED GUI flows: Mod Menu config button exists; controls show saved defaults; slider 50→75; Save writes JSON; Esc/Cancel never saves; Reset only saves on Save; invalid minimum > maximum blocked.
+2. Use Mod Menu `ModMenuApi#getModConfigScreenFactory` and Cloth Config `ConfigBuilder`; state is a separate draft until Save. Local singleplayer Save persists and updates integrated server policy; UI tells player to close/reopen anvil.
+3. When connected to dedicated server, show server-controlled read-only explanation; no misleading local settings that appear to modify server rules. Gracefully handle missing optional GUI mods without crashing core gameplay.
+4. Run GUI tests, manually review 26.2 screen appearance/accessibility and commit `feat: add automatic in-game config editor`.
+
+**Verification command**
+
+```bash
+./gradlew build
+```
+
+**Expected result:** exit 0; GUI Save persists, Cancel discards; singleplayer behavior changes after reopening anvil
+
+
+### Task 12: HigherEnchants and clean-profile compatibility
+
+**Files to create**
+
+- `docs/testing/acceptance-matrix.md`
+
+**Files to modify**
+
+- `src/gametest/java/io/github/zburgers/betteranvils/test/AnvilGameTests.java`
+
+**Implementation steps**
+
+1. Use independent 26.2 profiles: vanilla/no datapack and 26.2 HigherEnchants 1.4 enabled and reloaded from its separate public distribution.
+2. Test enchanted books combinations, extra levels, newly compatible enchantment pairs, armor/weapons/tools, repaired high-enchant equipment and denied incompatible pairs.
+3. Inspect produced jar contents for absence of `data/minecraft/enchantment/` and HigherEnchants assets; do not alter registry/data-driven max levels.
+4. Record actual PASS/FAIL/SKIPPED evidence for both profiles; commit `test: verify HigherEnchants compatibility`.
+
+**Verification command**
+
+```bash
+jar tf build/libs/better-anvils-*.jar
+```
+
+**Expected result:** no bundled HigherEnchants files, no overwritten enchantment JSON; actual play tests recorded separately
+
+
+### Task 13: Packaging, assets, licensing and installation docs
+
+**Files to create**
+
+- `LICENSE`
+- `THIRD_PARTY_NOTICES.md`
+- `src/main/resources/assets/better-anvils/icon.png`
+
+**Files to modify**
+
+- `README.md`
+- `src/main/resources/fabric.mod.json`
+
+**Implementation steps**
+
+1. Document server+client installation, Java 25/Fabric 26.2/required Fabric API, optional Mod Menu + Cloth Config, exact menu path and JSON path, dedicated-server management/restart, default/valid ranges, conflict caveats.
+2. Include MIT attribution/license notice for upstream Too Cheap where code/hooks are adapted. Do not copy upstream branding/icon or redistributable HigherEnchants data.
+3. Validate resource paths and translation strings; use original icon asset (or defer icon if artwork isn't licensed), ensure jar and -sources jar are clearly separated in README.
+4. Commit `docs: document Better Anvils install and provenance`.
+
+**Verification command**
+
+```bash
+./gradlew clean build
+```
+
+**Expected result:** exit 0; main jar fabric.mod.json valid; licenses/translation assets included, no datapack
+
+
+### Task 14: Build CI with executable evidence
+
+**Files to create**
+
+- `.github/workflows/build.yml`
+
+**Files to modify**
+
+- `build.gradle`
+- `docs/testing/acceptance-matrix.md`
+
+**Implementation steps**
+
+1. Configure push/PR GitHub Actions on Java 25, Gradle wrapper validation, `./gradlew clean test build`, game test launch tasks (discover names with `./gradlew tasks --all`), server smoke start, and client smoke where CI display runner permits.
+2. Upload test reports, logs and the single distributable jar as build artifacts; never report skipped manual tests as passed.
+3. Add separate job or matrix smoke with/without Mod Menu/Cloth Config to ensure optional-dependency safety and no server-side client imports.
+4. Commit `ci: verify build and in-game compatibility`.
+
+**Verification command**
+
+```bash
+./gradlew clean test build --stacktrace
+```
+
+**Expected result:** exit 0 locally AND green GitHub Actions for same SHA, with stored reports/artifact
+
+
+### Task 15: Release-candidate review and guarded handoff
+
+**Files to modify**
+
+- `docs/testing/acceptance-matrix.md`
+- `README.md`
+
+**Implementation steps**
+
+1. Inspect entire diff against this plan; recheck requirement traceability, licence, artifact contents, mixin targets, invalid combos, multiplayer sync and no client classes on server.
+2. Actually run server startup, singleplayer client, LAN/dedicated client, config Save→restart persistence, HigherEnchants profile and clean profile. Capture versions, game logs, screenshot and results.
+3. Perform independent code review and fix all launch-blocking/high-severity findings; rerun full suite and ensure CI's green commit SHA equals reviewed branch HEAD.
+4. Push normal fast-forward commits to `26.2-better-anvils`; verify SHA remotely. Produce the jar filename, test matrix and installation instructions. Make a PR if desired, but do not merge/release without approval.
+
+**Verification command**
+
+```bash
+git rev-parse HEAD && git ls-remote origin refs/heads/26.2-better-anvils
+```
+
+**Expected result:** both full SHA values match; actual executable jar built; all mandatory tests PASS
+
 
 ## 6. Test, review, and release gates
 
@@ -360,6 +581,6 @@ The plan is intentionally an approval checkpoint. Begin task 01 only when the ow
 
 ## 9. Distinct references
 
-This plan follows Shipyard's publicly documented writing-plans pattern: file-specific tasks, RED/GREEN checks, XML task markers, explicit expected command results, incremental commits, dependency sequencing and acceptance gates. The Shipyard runner itself is not installed as a native tool in this environment; this file is a self-contained plan for later execution.
+This plan follows Shipyard's publicly documented writing-plans pattern: file-specific tasks, RED/GREEN checks, readable Markdown task sections, explicit expected command results, incremental commits, dependency sequencing and acceptance gates. The Shipyard runner itself is not installed as a native tool in this environment; this file is a self-contained plan for later execution.
 
 Plan background: https://www.claudepluginhub.com/skills/lgbarn-shipyard-2/shipyard-writing-plans
