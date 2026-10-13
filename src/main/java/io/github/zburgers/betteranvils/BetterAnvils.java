@@ -14,7 +14,7 @@ public final class BetterAnvils implements ModInitializer {
     public static final String MOD_ID = "better-anvils";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     private static volatile ConfigService config;
-    private static volatile Supplier<BetterAnvilsConfig> effectiveConfig = BetterAnvils::activeConfig;
+    private static volatile Supplier<BetterAnvilsConfig> clientConfig = BetterAnvils::activeConfig;
 
     @Override
     public void onInitialize() {
@@ -29,12 +29,16 @@ public final class BetterAnvils implements ModInitializer {
         return current == null ? BetterAnvilsConfig.defaults() : current.current();
     }
 
-    public static BetterAnvilsConfig effectiveConfig() {
-        return effectiveConfig.get().snapshot();
+    /**
+     * The integrated server shares a JVM with the client, not a pricing policy.
+     * Never consult client session state while calculating a server-side result.
+     */
+    public static BetterAnvilsConfig effectiveConfig(boolean clientSide) {
+        return (clientSide ? clientConfig.get() : activeConfig()).snapshot();
     }
 
     public static void useClientPolicy(Supplier<BetterAnvilsConfig> supplier) {
-        effectiveConfig = supplier;
+        clientConfig = java.util.Objects.requireNonNull(supplier);
     }
 
     public static ConfigService configService() {

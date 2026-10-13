@@ -26,6 +26,7 @@ import net.minecraft.world.item.enchantment.Enchantments;
 
 import java.nio.file.Files;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class AnvilClientTests implements FabricClientGameTest {
     @Override
@@ -48,6 +49,7 @@ public final class AnvilClientTests implements FabricClientGameTest {
                 });
                 context.waitForScreen(AnvilScreen.class);
                 context.takeScreenshot("anvil-cost-100");
+                verifyServerPricingIsIsolatedFromClientPolicy(context);
                 exerciseSettingsScreen(context);
             }
         } catch (Exception exception) {
@@ -60,6 +62,36 @@ public final class AnvilClientTests implements FabricClientGameTest {
                 throw new RuntimeException(exception);
             }
         }
+    }
+
+    private void verifyServerPricingIsIsolatedFromClientPolicy(ClientGameTestContext context) {
+        var serverCost = new AtomicInteger(-1);
+        context.runOnClient(client -> {
+            // Deliberately create a stale client cache: 75% client discount versus 50% server discount.
+            if (!ClientPolicyState.accept(AnvilPolicyPayload.from(new BetterAnvilsConfig(150, 75, 1, true)))) {
+                throw new AssertionError("Expected valid client policy override");
+            }
+            var clientMenu = sharpnessMenu(client, client.player);
+            if (clientMenu.getCost() != 50) {
+                throw new AssertionError("The client preview should use its synchronized session policy");
+            }
+            var server = client.getSingleplayerServer();
+            if (server == null) {
+                throw new AssertionError("Expected integrated server for side-isolation regression");
+            }
+            server.execute(() -> {
+                var player = server.getPlayerList().getPlayers().getFirst();
+                var menu = sharpnessMenu(client, player);
+                serverCost.set(menu.getCost());
+            });
+        });
+        context.waitFor(client -> serverCost.get() >= 0);
+        context.runOnClient(client -> {
+            if (serverCost.get() != 100) {
+                throw new AssertionError("Integrated server charged client-cached price " + serverCost.get() + " instead of authoritative 100");
+            }
+            ClientPolicyState.accept(AnvilPolicyPayload.from(BetterAnvils.activeConfig()));
+        });
     }
 
     private void exerciseSettingsScreen(ClientGameTestContext context) throws Exception {
@@ -192,7 +224,7 @@ public final class AnvilClientTests implements FabricClientGameTest {
     }
 
     private static AnvilMenu sharpnessMenu(net.minecraft.client.Minecraft client, net.minecraft.world.entity.player.Player player) {
-        var sharpness = client.level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
+        var sharpness = player.level().registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.SHARPNESS);
         var sword = new ItemStack(Items.DIAMOND_SWORD);
         sword.set(DataComponents.REPAIR_COST, 194);
         var book = EnchantmentHelper.createBook(new EnchantmentInstance(sharpness, 5));
