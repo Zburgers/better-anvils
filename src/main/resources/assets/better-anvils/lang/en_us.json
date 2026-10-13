@@ -13,5 +13,7 @@
   "config.better-anvils.minimum.value": "Minimum: %s",
   "config.better-anvils.prior_work_value": "Preserve prior work XP penalty: %s",
   "config.better-anvils.missing_cloth_config": "Install Cloth Config to edit Better Anvils settings.",
-  "config.better-anvils.save_failed": "Could not save Better Anvils settings. Check the log for details."
+  "config.better-anvils.save_failed": "Could not save settings. Check the log; your changes are not lost.",
+  "config.better-anvils.retry_save": "Retry Save",
+  "config.better-anvils.back_to_settings": "Back to Settings"
 }

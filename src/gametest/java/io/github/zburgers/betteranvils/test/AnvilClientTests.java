@@ -215,6 +215,47 @@ public final class AnvilClientTests implements FabricClientGameTest {
         if (!Files.readString(configFile).equals(beforeInvalid)) {
             throw new AssertionError("Invalid settings must leave the saved config file unchanged");
         }
+        exerciseFailedSaveRecovery(context, configFile);
+    }
+
+    private void exerciseFailedSaveRecovery(ClientGameTestContext context, java.nio.file.Path configFile) throws Exception {
+        var preserved = configFile.resolveSibling("better-anvils-test-save-backup.json");
+        var original = BetterAnvils.activeConfig();
+        Files.move(configFile, preserved);
+        try {
+            // A directory at the JSON target reliably causes an IOException on all platforms.
+            Files.createDirectory(configFile);
+            context.runOnClient(client -> {
+                var screen = (ClothConfigScreen) BetterAnvilsConfigScreen.create(client.gui.screen());
+                entry(screen, "Anvil discount", IntegerSliderEntry.class).setValue(75);
+                client.setScreenAndShow(screen);
+            });
+            context.waitForScreen(ClothConfigScreen.class);
+            if (!context.tryClickScreenButton("Save & Quit")) {
+                throw new AssertionError("Save button should be enabled for a changed draft");
+            }
+            context.waitForScreen(BetterAnvilsConfigScreen.SaveErrorScreen.class);
+            if (!BetterAnvils.activeConfig().equals(original)) {
+                throw new AssertionError("A failed disk save must not change active anvil policy");
+            }
+            Files.delete(configFile);
+            Files.move(preserved, configFile);
+            if (!context.tryClickScreenButton("Retry Save")) {
+                throw new AssertionError("Save failure should provide an actionable Retry Save button");
+            }
+            context.waitFor(client -> BetterAnvils.activeConfig().anvilDiscountPercent() == 75);
+            if (!Files.readString(configFile).contains("\"anvilDiscountPercent\": 75")) {
+                throw new AssertionError("Retry must persist the retained draft");
+            }
+        } finally {
+            if (Files.isDirectory(configFile)) {
+                Files.delete(configFile);
+            }
+            if (Files.exists(preserved)) {
+                Files.move(preserved, configFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+            BetterAnvils.saveConfig(original);
+        }
     }
 
     private static <T extends AbstractConfigListEntry<?>> T entry(ClothConfigScreen screen, String label, Class<T> type) {
