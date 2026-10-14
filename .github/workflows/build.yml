@@ -81,3 +81,47 @@ jobs:
             build/run/clientGameTest/logs/**
             build/run/clientGameTest/screenshots/**
             build/verification-*.log
+
+  publish-github-prerelease:
+    name: Publish verified GitHub prerelease
+    needs: build-and-test
+    # Only a deliberately titled, reviewed squash merge can publish this RC.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release: Better Anvils v1.0.0-rc.1')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v7
+        with:
+          name: better-anvils-${{ github.sha }}
+          path: verified-build
+
+      - name: Stage tested mod jar and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' jars < <(find verified-build -type f -name 'better-anvils-*.jar' ! -name '*-sources.jar' -print0)
+          if [[ "${#jars[@]}" -ne 1 ]]; then
+            echo "::error::Expected exactly one distributable Better Anvils mod jar"
+            exit 1
+          fi
+          mkdir -p release
+          cp "${jars[0]}" release/better-anvils-1.0.0.jar
+          (cd release && sha256sum better-anvils-1.0.0.jar > SHA256SUMS)
+          cat release/SHA256SUMS
+
+      - name: Publish v1.0.0-rc.1 prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create v1.0.0-rc.1 \
+            release/better-anvils-1.0.0.jar \
+            release/SHA256SUMS \
+            --target "$GITHUB_SHA" \
+            --title "Better Anvils v1.0.0 RC1 (Fabric 26.2)" \
+            --prerelease \
+            --notes-file docs/releases/v1.0.0-rc.1.md
