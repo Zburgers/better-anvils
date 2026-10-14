@@ -86,7 +86,10 @@ jobs:
     name: Publish verified GitHub prerelease
     needs: build-and-test
     # Only a deliberately titled, reviewed squash merge can publish this RC.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'release: Better Anvils v1.0.0-rc.1')
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      startsWith(github.event.head_commit.message, 'release: Better Anvils v1.0.0-rc.1')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
