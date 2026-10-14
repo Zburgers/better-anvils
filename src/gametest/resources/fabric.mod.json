@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "better-anvils-test",
+  "version": "1.0.0",
+  "name": "Better Anvils Tests",
+  "environment": "*",
+  "entrypoints": {
+    "fabric-gametest": ["io.github.zburgers.betteranvils.test.AnvilGameTests"],
+    "fabric-client-gametest": ["io.github.zburgers.betteranvils.test.AnvilClientTests"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.2",
+    "java": ">=25",
+    "fabric-api": "*",
+    "better-anvils": "*"
+  }
+}

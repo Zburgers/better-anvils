@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "better-anvils",
+  "version": "${version}",
+  "name": "Better Anvils",
+  "description": "Configurable discounts and cost limits for vanilla anvil operations.",
+  "icon": "assets/better-anvils/icon.png",
+  "authors": ["Zburgers"],
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["io.github.zburgers.betteranvils.BetterAnvils"],
+    "client": ["io.github.zburgers.betteranvils.client.BetterAnvilsClient"],
+    "modmenu": ["io.github.zburgers.betteranvils.client.ModMenuIntegration"]
+  },
+  "mixins": ["better-anvils.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "breaks": {
+    "too-cheap": "*"
+  },
+  "suggests": {
+    "modmenu": "*",
+    "cloth-config": "*"
+  }
+}

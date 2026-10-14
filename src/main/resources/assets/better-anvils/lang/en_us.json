@@ -1,0 +1,19 @@
+{
+  "config.better-anvils.title": "Better Anvils",
+  "config.better-anvils.category": "Anvil costs",
+  "config.better-anvils.maximum": "Maximum anvil cost",
+  "config.better-anvils.discount": "Anvil discount",
+  "config.better-anvils.minimum": "Minimum nonzero cost",
+  "config.better-anvils.prior_work": "Preserve prior work XP penalty",
+  "config.better-anvils.reopen_anvil": "Close and reopen the anvil to refresh its current result.",
+  "config.better-anvils.server_controlled": "The connected server controls anvil settings. These values are read only.",
+  "config.better-anvils.minimum_exceeds_maximum": "Minimum cost cannot exceed maximum cost.",
+  "config.better-anvils.maximum.value": "Maximum: %s",
+  "config.better-anvils.discount.value": "Discount: %s%%",
+  "config.better-anvils.minimum.value": "Minimum: %s",
+  "config.better-anvils.prior_work_value": "Preserve prior work XP penalty: %s",
+  "config.better-anvils.missing_cloth_config": "Install Cloth Config to edit Better Anvils settings.",
+  "config.better-anvils.save_failed": "Could not save settings. Check the log; your changes are not lost.",
+  "config.better-anvils.retry_save": "Retry Save",
+  "config.better-anvils.back_to_settings": "Back to Settings"
+}
